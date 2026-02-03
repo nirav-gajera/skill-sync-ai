@@ -6,7 +6,7 @@ use App\AppNeuronMyAgent;
 use App\Models\Matches;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
+use Inertia\Inertia; 
 use App\Models\Job;
 use App\Models\Resume;
 use Illuminate\Support\Facades\Auth;
