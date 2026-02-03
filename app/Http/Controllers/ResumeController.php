@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ResumeController extends Controller
 {
+    const DISK = self::DISK;
+
     public function index(Request $request)
     {
         $query = Resume::where('user_id', Auth::id());
@@ -44,7 +46,7 @@ class ResumeController extends Controller
             'file' => 'required|file|mimes:pdf,doc,docx,txt,json,xml',
         ]);
 
-        $filePath = $request->file('file')->store('resumes', 'public');
+        $filePath = $request->file('file')->store('resumes', self::DISK);
 
         Resume::create([
             'user_id' => Auth::id(),
@@ -72,9 +74,9 @@ class ResumeController extends Controller
         $data = ['name' => $request->name];
 
         if ($request->hasFile('file')) {
-            Storage::disk('public')->delete($resume->file_path);
+            Storage::disk(self::DISK)->delete($resume->file_path);
 
-            $data['file_path'] = $request->file('file')->store('resumes', 'public');
+            $data['file_path'] = $request->file('file')->store('resumes', self::DISK);
         }
 
         $resume->update($data);
@@ -85,7 +87,7 @@ class ResumeController extends Controller
     public function destroy(Resume $resume)
     {
         $this->authorizeResumeAccess( $resume);
-        Storage::disk('public')->delete($resume->file_path);
+        Storage::disk(self::DISK)->delete($resume->file_path);
 
         $resume->delete();
 
