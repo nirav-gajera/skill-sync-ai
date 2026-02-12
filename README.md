@@ -160,7 +160,7 @@ You can run Laravel tests using:
 
 ## 👨‍💻 Author
 
-- Developed by [Nirav](https://github.com/nirav-arsenaltech)
+- Developed by [Nirav](https://github.com/nirav-gajera)
 
 ---
 
