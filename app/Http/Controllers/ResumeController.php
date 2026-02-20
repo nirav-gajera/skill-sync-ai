@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ResumeController extends Controller
 {
-    const DISK = self::DISK;
+    const DISK = 'public;
 
     public function index(Request $request)
     {
