@@ -67,7 +67,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="name">{{ $name ?? 'Applicant' }}</div>
+            <div class="name">{{ $name ?? (auth()->check() ? auth()->user()->name : null) ?? 'Applicant' }}</div>
 
             <div class="contact-line">
                 @php
