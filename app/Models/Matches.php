@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Matches extends Model
 {
     protected $table = 'matches';
+
     protected $primaryKey = 'id';
 
     protected $fillable = [
@@ -17,7 +18,7 @@ class Matches extends Model
         'semantic_score',
         'keyword_score',
         'keyword_gap',
-        'ai_result'
+        'ai_result',
     ];
 
     protected $casts = [

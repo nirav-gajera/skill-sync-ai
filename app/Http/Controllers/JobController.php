@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
 use App\Models\Job;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class JobController extends Controller
 {
@@ -33,7 +33,6 @@ class JobController extends Controller
         ]);
     }
 
-
     public function create()
     {
         return Inertia::render('Jobs/Create');
@@ -58,6 +57,7 @@ class JobController extends Controller
     public function edit(Job $job)
     {
         $this->authorizeJobAccess($job);
+
         return Inertia::render('Jobs/Edit', ['job' => $job]);
     }
 
@@ -89,6 +89,7 @@ class JobController extends Controller
     public function show(Job $job)
     {
         $this->authorizeJobAccess($job);
+
         return Inertia::render('Jobs/Show', ['job' => $job]);
     }
 
@@ -101,6 +102,4 @@ class JobController extends Controller
             abort(403, 'Unauthorized action.');
         }
     }
-
-
 }

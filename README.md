@@ -53,7 +53,12 @@ Use the demo account to log in:
   - 🧠 Answer Suggestions: AI-crafted example answers you can use as a basis and refine for your own responses.
 
 **Online Exam Feature**
-- TBA...
+- 📝 Start an AI-generated MCQ exam using a selected resume and job description.  
+- ⏱️ Configure exam duration and question count before launching the test.  
+- 🎯 Add an optional focus area to tailor the generated questions to a specific skill set or topic.  
+- 📌 Take the exam in a timed interface with question navigation, answer tracking, and auto-submit when time expires.  
+- 📊 Get instant evaluation after submission with score %, correct answers, detailed explanations, and time taken.  
+- 🗂️ Review saved exam history anytime, including exam status, attempts, and results.  
 ---
 
 ## 🖼️ Images

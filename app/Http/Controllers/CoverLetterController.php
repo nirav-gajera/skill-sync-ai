@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
-
 use App\AppNeuronMyAgent;
 use App\Models\CoverLetter;
-use App\Models\Matches;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
 use App\Models\Job;
 use App\Models\Resume;
-use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class CoverLetterController extends Controller
 {
@@ -88,7 +87,7 @@ class CoverLetterController extends Controller
         $userId = Auth::id();
 
         $validated = $request->validate([
-            'job_id' => "required",
+            'job_id' => 'required',
             'resume_id' => 'required',
             'company_name' => 'required|string|max:255',
             'template_id' => 'required',
@@ -112,15 +111,16 @@ class CoverLetterController extends Controller
         if (!$resume) {
             Log::error('Resume not found in DB', [
                 'user_id' => $userId,
-                'resume_id' => $validated['resume_id']
+                'resume_id' => $validated['resume_id'],
             ]);
             return back()->with('error', 'Resume not found.');
         }
 
         // --- Extract content from resume ---
         try {
-            $filePath = storage_path('app/public/' . $resume->file_path);
-            $content = extractResumeContent($filePath);
+            $content = withStoredFile($resume->file_path, function (string $filePath): string {
+                return extractResumeContent($filePath);
+            });
         } catch (\Exception $e) {
             Log::error("Resume extraction failed: " . $e->getMessage());
             return back()->with('error', 'Failed to extract resume content.');
@@ -132,7 +132,7 @@ class CoverLetterController extends Controller
 
         // --- AI Generation ---
         try {
-            $agent = new AppNeuronMyAgent();
+            $agent = new AppNeuronMyAgent;
             $aiResult = $agent->createCoverLetterData(
                 $jobTitle,
                 $jobDescription,
@@ -157,12 +157,8 @@ class CoverLetterController extends Controller
             $linkedin = $data['linkedin'] ?? '';
             $coverLetterHtml = $data['cover_letter_html'] ?? '';
 
-            $pdfFileName = 'cover_letter_' . time() . '.pdf';
-            $pdfFilePath = storage_path('app/public/cover_letters/' . $pdfFileName);
-
-            if (!file_exists(dirname($pdfFilePath))) {
-                mkdir(dirname($pdfFilePath), 0755, true);
-            }
+            $pdfFileName = 'cover_letter_'.time().'.pdf';
+            $pdfDiskPath = 'cover_letters/'.$pdfFileName;
 
             $templateId = (int) $validated['template_id'];
             $view = coverLetterTemplateView($templateId);
@@ -179,10 +175,12 @@ class CoverLetterController extends Controller
                 'linkedinIcon' => asset('images/linkedin.png'),
             ])->render();
 
-            Pdf::loadHTML($html)
+            $pdfContent = Pdf::loadHTML($html)
                 ->setPaper('a4')
                 ->setOption('isRemoteEnabled', true)
-                ->save($pdfFilePath);
+                ->output();
+
+            Storage::disk(storageDiskName())->put($pdfDiskPath, $pdfContent, ['visibility' => 'public']);
 
             // --- Save DB record ---
             CoverLetter::create([
@@ -192,7 +190,7 @@ class CoverLetterController extends Controller
                 'company_name' => $companyName,
                 'template_id' => $templateId,
                 'ai_result' => $data,
-                'file_path' => 'cover_letters/' . $pdfFileName,
+                'file_path' => $pdfDiskPath,
             ]);
 
         } catch (\Exception $e) {
@@ -332,7 +330,7 @@ class CoverLetterController extends Controller
         $view = coverLetterTemplateView($templateId);
 
         if ($coverLetter->file_path) {
-            $pdf = Pdf::loadView($view, [
+            $pdfContent = Pdf::loadView($view, [
                 'name' => $aiResult['applicant_name'] ?? 'Applicant',
                 'email' => $aiResult['email'] ?? '',
                 'phone' => $aiResult['phone'] ?? '',
@@ -341,9 +339,9 @@ class CoverLetterController extends Controller
                 'emailIcon' => public_path('images/email.png'),
                 'phoneIcon' => public_path('images/phone.png'),
                 'linkedinIcon' => public_path('images/linkedin.png'),
-            ]);
+            ])->output();
 
-            $pdf->save(storage_path('app/public/' . $coverLetter->file_path));
+            Storage::disk(storageDiskName())->put($coverLetter->file_path, $pdfContent, ['visibility' => 'public']);
         }
 
         return redirect()->route('cover-letters.index')->with('success', 'Cover Letter updated successfully!');
@@ -380,6 +378,11 @@ class CoverLetterController extends Controller
         if (!$CoverLetter) {
             return back()->with('error', 'Cover Letter not found.');
         }
+
+        if ($CoverLetter->file_path) {
+            Storage::disk(storageDiskName())->delete($CoverLetter->file_path);
+        }
+
         $CoverLetter->delete();
 
         return redirect()->route('cover-letters.index')->with('flash', ['success' => 'Cover Letter  Deleted successfully!']);

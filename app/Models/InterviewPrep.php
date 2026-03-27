@@ -13,6 +13,7 @@ class InterviewPrep extends Model
      * The table associated with the model.
      */
     protected $primarykey = 'id';
+
     protected $table = 'interview_preps';
 
     /**
@@ -32,8 +33,6 @@ class InterviewPrep extends Model
         'questions_answers' => 'array',
     ];
 
-
-
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -46,7 +45,6 @@ class InterviewPrep extends Model
 
     public function job()
     {
-        return $this->belongsTo(Job::class,'job_description_id');
+        return $this->belongsTo(Job::class, 'job_description_id');
     }
-
 }

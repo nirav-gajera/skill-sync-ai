@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App;
 
-use NeuronAI\Agent;
-use NeuronAI\SystemPrompt;
-use NeuronAI\Providers\AIProviderInterface;
-use NeuronAI\Chat\Messages\UserMessage;
-use NeuronAI\Providers\Gemini\Gemini;
 use Illuminate\Support\Facades\Log;
+use NeuronAI\Agent;
 use NeuronAI\Chat\History\ChatHistoryInterface;
 use NeuronAI\Chat\History\InMemoryChatHistory;
+use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\Providers\AIProviderInterface;
+use NeuronAI\Providers\Gemini\Gemini;
+use NeuronAI\SystemPrompt;
 
 class AppNeuronMyAgent extends Agent
 {
@@ -24,7 +24,7 @@ class AppNeuronMyAgent extends Agent
         $apiKey = config('neuron.gemini.api_key');
         $model = config('neuron.gemini.model');
 
-        if (!$apiKey || !$model) {
+        if (! $apiKey || ! $model) {
             Log::error('Gemini API Key or Model is missing. Check your .env and config!');
             throw new \Exception('Gemini API Key or Model is missing.');
         }
@@ -35,14 +35,10 @@ class AppNeuronMyAgent extends Agent
         );
     }
 
-
     /**
      * Analyze job and resumes using Neuron AI
      *
-     * @param string $jobTitle
-     * @param string $jobDescription
-     * @param array<int, array{name:string, content:string}> $resumes
-     * @return string
+     * @param  array<int, array{name:string, content:string}>  $resumes
      */
     public function analyzeJobAndResumes(string $jobTitle, string $jobDescription, array $resumes, array $resumeFileTypes): string
     {
@@ -50,6 +46,7 @@ class AppNeuronMyAgent extends Agent
         // Prepare resume texts
         $resumeTexts = collect($resumes)->map(function ($resume) use ($resumeFileTypes) {
             $fileType = $resumeFileTypes[$resume['id']] ?? 'UNKNOWN';
+
             return "Resume Name: {$resume['name']}
                     Resume File Type: {$fileType}
                     Content:
@@ -59,13 +56,23 @@ class AppNeuronMyAgent extends Agent
         // Enhanced system prompt with new capabilities
         $systemPrompt = new SystemPrompt(
             background: [
-                "You are a highly experienced HR AI assistant.",
-                "Your task is to analyze resumes against a job description in detail.",
-                "You must compute: match percentages, semantic relevance, keyword alignment, skill gaps, strengths, weaknesses, and ATS best practices.",
-                "Group related skills under broader categories and treat synonymous skills as partial matches where appropriate.",
-                "Return a valid JSON array (no markdown, no explanation, no text outside JSON).",
-                "Use numeric values 0–100 for all scoring metrics.",
-                "All keys and string values must be double-quoted. Always return valid, parseable JSON."
+                'You are a highly experienced HR AI assistant.',
+                'Your task is to analyze resumes against a job description in detail.',
+                'You must compute: match percentages, semantic relevance, keyword alignment, skill gaps, strengths, weaknesses, and ATS best practices.',
+                'Group related skills under broader categories and treat synonymous skills as partial matches where appropriate.',
+
+                'STRICT OUTPUT RULES (MUST FOLLOW):',
+                '1. Return ONLY valid JSON.',
+                '2. DO NOT include markdown (no ```json).',
+                '3. DO NOT include explanations.',
+                '4. DO NOT include text before or after JSON.',
+                '5. DO NOT break JSON format.',
+                '6. If unsure, return an empty array [].',
+
+                'OUTPUT FORMAT MUST BE A VALID JSON ARRAY.',
+                'Use numeric values 0–100 for all scoring metrics.',
+                'All keys and string values must be double-quoted.',
+                'Ensure the response is 100% valid JSON parseable by json_decode in PHP.',
             ]
         );
 
@@ -154,23 +161,42 @@ class AppNeuronMyAgent extends Agent
             $response = $this->chat([$userMessage]);
             $aiContent = $response->getContent();
 
-            // Validate JSON
-            json_decode($aiContent, true, 512, JSON_THROW_ON_ERROR);
+            $cleaned = trim($aiContent);
 
-            return $aiContent;
+            // Remove markdown ```json ```
+            $cleaned = preg_replace('/^```(json)?\s*/i', '', $cleaned);
+            $cleaned = preg_replace('/\s*```$/', '', $cleaned);
+
+            // Try decoding safely
+            $decoded = json_decode($cleaned, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('AI returned invalid JSON', [
+                    'raw' => $aiContent,
+                    'cleaned' => $cleaned,
+                    'error' => json_last_error_msg(),
+                ]);
+
+                throw new \Exception('Invalid JSON from AI: '.json_last_error_msg());
+            }
+
+            return json_encode($decoded);
+
         } catch (\Exception $e) {
-            Log::error("Error during AI analysis: " . $e->getMessage());
-            return "AI analysis failed. Check logs for details.";
+            Log::error('Error during AI analysis: '.$e->getMessage());
+
+            return json_encode([]);
         }
     }
+
     public function createCoverLetterData(string $jobTitle, string $jobDescription, array $resumes, string $companyName): string
     {
         $resumeTexts = collect($resumes)->map(function ($resume) {
             return "Resume ID: {$resume['id']}\n\n{$resume['content']}";
         })->implode("\n\n----------------------------------------\n\n");
-        $userName= auth()->user()->name ;
+        $userName = auth()->user()->name;
 
-        $systemPrompt = <<<PROMPT
+        $systemPrompt = <<<'PROMPT'
         You are an advanced AI writing assistant that crafts **concise, elegant, single-page professional cover letters**.
 
         Your goal:
@@ -250,7 +276,7 @@ class AppNeuronMyAgent extends Agent
                 }
             }
 
-            if (!is_array($decoded)) {
+            if (! is_array($decoded)) {
                 // best-effort extraction using regex
                 $raw = $cleaned;
                 // attempt to find email
@@ -259,7 +285,7 @@ class AppNeuronMyAgent extends Agent
 
                 // attempt to find linkedin url
                 preg_match('/https?:\/\/(www\.)?linkedin\.com[^\s"]+/i', $raw, $mLn);
-                if (!isset($mLn[0])) {
+                if (! isset($mLn[0])) {
                     // fallback find linkedin path without http
                     preg_match('/linkedin\.com\/[^\s"]+/i', $raw, $mLn);
                 }
@@ -271,7 +297,7 @@ class AppNeuronMyAgent extends Agent
 
                 // attempt to find name: use first line of resume content or "Applicant"
                 $firstLine = '';
-                if (!empty($resumes) && !empty($resumes[0]['content'])) {
+                if (! empty($resumes) && ! empty($resumes[0]['content'])) {
                     $lines = preg_split('/\r\n|\r|\n/', trim($resumes[0]['content']));
                     $firstLine = trim($lines[0] ?? '');
                 }
@@ -281,7 +307,7 @@ class AppNeuronMyAgent extends Agent
                 }
 
                 // take whole cleaned raw as letter body wrapped as paragraphs
-                $coverHtml = '<p>' . nl2br(e(trim($raw))) . '</p>';
+                $coverHtml = '<p>'.nl2br(e(trim($raw))).'</p>';
 
                 $decoded = [
                     'applicant_name' => $firstLine ?: $userName ?: 'Applicant',
@@ -303,7 +329,7 @@ class AppNeuronMyAgent extends Agent
 
             return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         } catch (\Throwable $e) {
-            Log::error('AI generation failed: ' . $e->getMessage());
+            Log::error('AI generation failed: '.$e->getMessage());
             // fallback minimal JSON
             $fallback = [
                 'applicant_name' => $userName ?: 'Applicant',
@@ -312,16 +338,18 @@ class AppNeuronMyAgent extends Agent
                 'linkedin' => '',
                 'cover_letter_html' => '<p>Unable to generate cover letter at this time..</p>',
             ];
+
             return json_encode($fallback, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         }
     }
+
     public function createInterviewPrep(string $jobTitle, string $jobDescription, array $resumes): string
     {
         $resumeTexts = collect($resumes)->map(function ($resume) {
             return "Resume ID: {$resume['id']}\n\n{$resume['content']}";
         })->implode("\n\n----------------------------------------\n\n");
 
-        $systemPrompt = <<<PROMPT
+        $systemPrompt = <<<'PROMPT'
             You are an expert AI career coach. Your task is to generate **interview questions, answers, and a summary** for a candidate.
 
             Instructions:
@@ -343,7 +371,6 @@ class AppNeuronMyAgent extends Agent
 
             - Make sure the answers reference skills or experiences from the resume where appropriate.
             PROMPT;
-
 
         $fullPrompt = <<<PROMPT
 
@@ -367,11 +394,168 @@ class AppNeuronMyAgent extends Agent
             $cleaned = preg_replace('/\s*```$/', '', $cleaned);
 
             $decoded = json_decode($cleaned, true);
+
             return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         } catch (\Throwable $e) {
-            Log::error('AI generation failed: ' . $e->getMessage());
+            Log::error('AI generation failed: '.$e->getMessage());
+
             return json_encode([], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         }
+    }
+
+    public function createOnlineExam(string $jobTitle, string $jobDescription, array $resumes, string $focus): string
+    {
+        return $this->createOnlineExamSession($jobTitle, $jobDescription, $resumes, $focus, 10);
+    }
+
+    public function createOnlineExamSession(string $jobTitle, string $jobDescription, array $resumes, string $focus, int $questionCount): string
+    {
+        $resumeTexts = collect($resumes)->map(function ($resume) {
+            return "Resume ID: {$resume['id']}\nName: {$resume['name']}\n\n{$resume['content']}";
+        })->implode("\n\n----------------------------------------\n\n");
+
+        $systemPrompt = new SystemPrompt(
+            background: [
+                'You are a seasoned AI exam designer who creates realistic, job-aligned technical assessments.',
+                'Each exam should feel like a screening round for the target role.',
+                'You must always return valid JSON with no surrounding commentary.',
+            ]
+        );
+
+        $focusSection = $focus ? "Focus Area: {$focus}\n\n" : '';
+
+        $fullPrompt = <<<PROMPT
+        {$systemPrompt}
+
+        Job Title: {$jobTitle}
+        Job Description:
+        {$jobDescription}
+
+        {$focusSection}Candidate Resume:
+        {$resumeTexts}
+
+        Instructions:
+        - Generate exactly {$questionCount} multiple choice questions covering technical, situational, and behavior aspects relevant to the job and resume.
+        - Provide multiple choice questions (4 options) and mark the correct answer.
+        - After each question, explain why the correct answer is right and why others are wrong.
+        - Include a short summary of the candidate's readiness at the end.
+        - Format everything strictly as JSON:
+
+        {
+            "summary": "Short summary text",
+            "questions": [
+                {
+                    "question": "Full question text",
+                    "type": "multiple_choice",
+                    "choices": [
+                        "Option A",
+                        "Option B",
+                        "Option C",
+                        "Option D"
+                    ],
+                    "answer": "Option A",
+                    "explanation": "Why Option A is correct and why others are not."
+                }
+            ]
+        }
+
+        - Use plain text values and keep the JSON valid (double quotes, no trailing commas).
+        PROMPT;
+
+        try {
+            $userMessage = new UserMessage($fullPrompt);
+            $response = $this->chat([$userMessage]);
+            $aiContent = trim($response->getContent());
+            $aiContent = preg_replace('/^```(json)?\s*/i', '', $aiContent);
+            $aiContent = preg_replace('/\s*```$/', '', $aiContent);
+            $decoded = json_decode($aiContent, true, 512, JSON_THROW_ON_ERROR);
+            if (! isset($decoded['summary'])) {
+                $decoded['summary'] = "Generated exam for {$jobTitle}.";
+            }
+            if (! isset($decoded['questions'])) {
+                $decoded['questions'] = [];
+            }
+            $decoded['questions'] = array_values(array_slice($decoded['questions'], 0, $questionCount));
+
+            return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        } catch (\Throwable $e) {
+            Log::error('Online exam generation failed: '.$e->getMessage());
+        }
+
+        $fallback = [
+            'summary' => "Unable to generate exam for {$jobTitle} right now.",
+            'questions' => [],
+        ];
+
+        return json_encode($fallback, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    }
+
+    public function evaluateOnlineExam(string $jobTitle, string $jobDescription, array $questions, array $answers): string
+    {
+        $systemPrompt = new SystemPrompt(
+            background: [
+                'You are a strict AI exam evaluator.',
+                'You receive MCQ questions, the correct answer for each, and the candidate answer.',
+                'Return valid JSON only with no surrounding commentary.',
+            ]
+        );
+
+        $serializedQuestions = json_encode($questions, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $serializedAnswers = json_encode($answers, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        $fullPrompt = <<<PROMPT
+        {$systemPrompt}
+
+        Job Title: {$jobTitle}
+        Job Description:
+        {$jobDescription}
+
+        Questions:
+        {$serializedQuestions}
+
+        Candidate Answers:
+        {$serializedAnswers}
+
+        Instructions:
+        - Evaluate each answer against the original question's correct answer.
+        - Keep the evaluation factual and concise.
+        - Return JSON with this exact structure:
+        {
+            "score": 0,
+            "correct_answers": 0,
+            "total_questions": 0,
+            "percentage": 0,
+            "summary": "Short performance summary",
+            "results": [
+                {
+                    "question_index": 0,
+                    "question": "Question text",
+                    "selected_option": "Candidate answer or null",
+                    "correct_option": "Correct answer",
+                    "is_correct": true,
+                    "explanation": "Short explanation"
+                }
+            ]
+        }
+
+        - score, correct_answers, total_questions, and percentage must be numeric.
+        - results must contain one item per question in order.
+        PROMPT;
+
+        try {
+            $userMessage = new UserMessage($fullPrompt);
+            $response = $this->chat([$userMessage]);
+            $aiContent = trim($response->getContent());
+            $aiContent = preg_replace('/^```(json)?\s*/i', '', $aiContent);
+            $aiContent = preg_replace('/\s*```$/', '', $aiContent);
+            $decoded = json_decode($aiContent, true, 512, JSON_THROW_ON_ERROR);
+
+            return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        } catch (\Throwable $e) {
+            Log::error('Online exam evaluation failed: '.$e->getMessage());
+        }
+
+        return json_encode([], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
 
     protected function chatHistory(): ChatHistoryInterface
@@ -380,6 +564,4 @@ class AppNeuronMyAgent extends Agent
             contextWindow: 50000
         );
     }
-
-
 }

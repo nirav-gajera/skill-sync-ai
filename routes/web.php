@@ -1,30 +1,43 @@
 <?php
+
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CoverLetterController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InterviewPrepController;
 use App\Http\Controllers\JobController;
+use App\Http\Controllers\OnlineExamController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResumeController;
-use Illuminate\Support\Facades\Route;
+use App\Models\Resume;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
 
-Route::get('/', function () {
-    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
-});
+// Route::get('/', function () {
+//     return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
+// });
 
+Route::get('/', [HomeController::class, 'index'])->name('home');
 /*
 |--------------------------------------------------------------------------|
 | Authenticated Routes                                                     |
 |--------------------------------------------------------------------------|
 */
 
-Route::get('/resumes/view/{filename}', function ($filename) {
-    $file = storage_path('app/public/resumes/' . $filename);
-    abort_unless(file_exists($file), 404);
-    return response()->file($file);
+Route::get('/resumes/view/{filename}', function (string $filename) {
+    abort_unless(Auth::check(), 403);
+
+    $resume = Resume::where('user_id', Auth::id())
+        ->get(['file_path'])
+        ->first(function (Resume $resume) use ($filename): bool {
+            return basename($resume->file_path) === $filename;
+        });
+
+    abort_unless($resume, 404);
+
+    return redirect()->away(storageFileUrl($resume->file_path));
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -49,6 +62,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
+
+    Route::resource('online-exams', OnlineExamController::class);
 
     // Analytics routes
     Route::prefix('analytics')->group(function () {

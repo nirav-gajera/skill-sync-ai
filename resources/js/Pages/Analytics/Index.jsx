@@ -5,39 +5,328 @@ import autoTable from 'jspdf-autotable';
 import { usePage, router } from '@inertiajs/react';
 import toast, { Toaster } from 'react-hot-toast';
 import Layout from '../Dashboard/Components/Layout';
-import { ChartBarIcon, EyeIcon, CheckIcon, PencilIcon, TrashIcon, XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-import { Head } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
+import {
+    EyeIcon, CheckIcon, TrashIcon, XMarkIcon,
+    ArrowDownTrayIcon, MagnifyingGlassIcon,
+    DocumentTextIcon, ArrowTopRightOnSquareIcon,
+} from '@heroicons/react/24/outline';
+import { Head, Link } from '@inertiajs/react';
 import { Inertia } from '@inertiajs/inertia';
 import Select from 'react-select';
+
+/* ─────────────────────────────────────────────
+   Styles  (ai- prefix = analytics index)
+───────────────────────────────────────────── */
+const styles = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.ai-root { font-family:'Inter',sans-serif; padding:28px 28px 48px; background:#0f172a; min-height:100%; }
+
+/* ── Header ── */
+.ai-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.ai-title    { font-size:22px; font-weight:800; color:#f1f5f9; letter-spacing:-0.5px; }
+.ai-subtitle { font-size:13px; color:#6e7e95; margin-top:3px; }
+
+/* ── Cards / panels ── */
+.ai-card {
+    background:#1e293b; border:1px solid rgba(255,255,255,0.07);
+    border-radius:16px; padding:24px; margin-bottom:20px;
+}
+
+/* ── Section label ── */
+.ai-label {
+    display:block; font-size:12px; font-weight:600; color:#6e7e95;
+    text-transform:uppercase; letter-spacing:0.8px; margin-bottom:10px;
+}
+
+/* ── react-select dark theme ── */
+.ai-select .react-select__control {
+    background:#0f172a; border:1px solid rgba(255,255,255,0.10);
+    border-radius:10px; box-shadow:none; min-height:40px;
+    font-size:13px; font-family:'Inter',sans-serif;
+}
+.ai-select .react-select__control:hover { border-color:rgba(56,189,248,0.35); }
+.ai-select .react-select__control--is-focused {
+    border-color:rgba(56,189,248,0.35) !important;
+    box-shadow:0 0 0 3px rgba(56,189,248,0.08) !important;
+}
+.ai-select .react-select__placeholder { color:#6e7e95; }
+.ai-select .react-select__single-value { color:#e2e8f0; }
+.ai-select .react-select__input-container { color:#e2e8f0; }
+.ai-select .react-select__menu {
+    background:#1e293b; border:1px solid rgba(255,255,255,0.09);
+    border-radius:10px; overflow:hidden; font-size:13px;
+}
+.ai-select .react-select__option { background:transparent; color:#94a3b8; padding:9px 14px; cursor:pointer; }
+.ai-select .react-select__option:hover,
+.ai-select .react-select__option--is-focused  { background:rgba(56,189,248,0.08); color:#e2e8f0; }
+.ai-select .react-select__option--is-selected  { background:rgba(56,189,248,0.15); color:#38bdf8; }
+.ai-select .react-select__indicator-separator  { background:rgba(255,255,255,0.08); }
+.ai-select .react-select__dropdown-indicator,
+.ai-select .react-select__clear-indicator { color:#6e7e95; }
+.ai-select .react-select__dropdown-indicator:hover,
+.ai-select .react-select__clear-indicator:hover { color:#94a3b8; }
+
+/* ── Resume grid ── */
+.ai-resume-grid-wrap {
+    border:1px solid rgba(255,255,255,0.07);
+    border-radius:12px; max-height:300px; overflow-y:auto;
+    padding:12px; background:rgba(0,0,0,0.15);
+}
+.ai-resume-grid-wrap::-webkit-scrollbar { width:4px; }
+.ai-resume-grid-wrap::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:10px; }
+
+.ai-resume-grid {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+}
+@media(max-width:900px){ .ai-resume-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:540px){ .ai-resume-grid { grid-template-columns:1fr; } }
+
+.ai-resume-card {
+    background:#1a2640; border:1px solid rgba(255,255,255,0.07);
+    border-radius:12px; padding:14px;
+    cursor:pointer; transition:all 0.18s;
+    display:flex; flex-direction:column; gap:8px; position:relative;
+}
+.ai-resume-card:hover { border-color:rgba(255,255,255,0.14); background:rgba(255,255,255,0.04); }
+.ai-resume-card.selected {
+    border-color:rgba(56,189,248,0.45) !important;
+    background:rgba(56,189,248,0.07) !important;
+    box-shadow:0 0 0 3px rgba(56,189,248,0.07);
+}
+
+.ai-resume-card-top {
+    display:flex; align-items:center; justify-content:space-between;
+}
+.ai-resume-icon {
+    width:28px; height:28px; border-radius:8px;
+    background:rgba(129,140,248,0.12); border:1px solid rgba(129,140,248,0.20);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.ai-resume-check {
+    width:20px; height:20px; border-radius:6px;
+    background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.ai-resume-placeholder { width:20px; height:20px; }
+.ai-resume-name {
+    font-size:13px; font-weight:600; color:#e2e8f0; line-height:1.4;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ai-resume-link {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; color:#38bdf8; text-decoration:none; font-weight:500;
+    transition:color 0.15s;
+}
+.ai-resume-link:hover { color:#7dd3fc; }
+.ai-resume-empty {
+    color:#6e7e95; font-size:13px; text-align:center;
+    padding:32px 0; grid-column:1/-1;
+}
+
+/* ── Scan button ── */
+.ai-btn-scan {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 22px; border-radius:10px;
+    background:linear-gradient(135deg,#0ea5e9,#6366f1);
+    color:#fff; font-size:13px; font-weight:700;
+    border:none; cursor:pointer; transition:all 0.18s;
+    box-shadow:0 4px 14px rgba(14,165,233,0.25);
+}
+.ai-btn-scan:hover { opacity:0.9; transform:translateY(-1px); }
+.ai-btn-scan:disabled { opacity:0.55; cursor:not-allowed; transform:none; }
+
+/* ── Scan History table ── */
+.ai-table-wrap {
+    background:#1e293b; border:1px solid rgba(255,255,255,0.07);
+    border-radius:14px; overflow:hidden; overflow-x:auto;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);
+}
+.ai-table { width:100%; border-collapse:collapse; min-width:860px; }
+.ai-table thead { background:rgba(255,255,255,0.025); }
+.ai-table th {
+    padding:12px 14px; text-align:left;
+    font-size:11px; font-weight:600; color:#6e7e95;
+    text-transform:uppercase; letter-spacing:0.8px;
+    border-bottom:1px solid rgba(255,255,255,0.05); white-space:nowrap;
+}
+.ai-table td {
+    padding:12px 14px; font-size:13px; color:#94a3b8;
+    border-bottom:1px solid rgba(255,255,255,0.04); white-space:nowrap;
+}
+.ai-table tbody tr:last-child td { border-bottom:none; }
+.ai-table tbody tr:hover td { background:rgba(255,255,255,0.025); }
+.ai-table td.ai-td-name { color:#e2e8f0; font-weight:500; white-space:normal; }
+.ai-table td.ai-td-link a {
+    color:#38bdf8; text-decoration:none; font-size:13px; transition:color 0.15s;
+}
+.ai-table td.ai-td-link a:hover { color:#7dd3fc; }
+
+/* ── Score badges ── */
+.ai-score {
+    display:inline-flex; align-items:center;
+    padding:3px 9px; border-radius:20px; font-size:12px; font-weight:600;
+}
+.ai-score-blue   { background:rgba(56,189,248,0.10);  color:#38bdf8; }
+.ai-score-green  { background:rgba(52,211,153,0.10);  color:#34d399; }
+.ai-score-purple { background:rgba(139,92,246,0.10);  color:#a78bfa; }
+.ai-score-orange { background:rgba(251,146,60,0.10);  color:#fb923c; }
+.ai-score-red    { background:rgba(248,113,113,0.10); color:#f87171; }
+
+/* ── Action buttons ── */
+.ai-actions { display:flex; align-items:center; gap:6px; }
+.ai-action-btn {
+    width:30px; height:30px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid transparent; cursor:pointer;
+    background:none; transition:all 0.16s; text-decoration:none; flex-shrink:0;
+}
+.ai-action-view     { color:#38bdf8; background:rgba(56,189,248,0.08);  border-color:rgba(56,189,248,0.15); }
+.ai-action-del      { color:#f87171; background:rgba(248,113,113,0.08); border-color:rgba(248,113,113,0.15); }
+.ai-action-download { color:#34d399; background:rgba(52,211,153,0.08);  border-color:rgba(52,211,153,0.15); }
+.ai-action-view:hover     { background:rgba(56,189,248,0.18); }
+.ai-action-del:hover      { background:rgba(248,113,113,0.18); }
+.ai-action-download:hover { background:rgba(52,211,153,0.18); }
+.ai-action-btn:disabled   { opacity:0.4; cursor:not-allowed; }
+
+/* ── Pagination ── */
+.ai-pagination-row {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-top:18px; flex-wrap:wrap; gap:12px;
+}
+.ai-per-page { display:flex; align-items:center; gap:8px; font-size:13px; color:#7b94b7; }
+.ai-per-page-select {
+    background:#1e293b; border:1px solid rgba(255,255,255,0.08);
+    color:#94a3b8; border-radius:8px; padding:5px 10px; font-size:13px;
+    font-family:'Inter',sans-serif; outline:none; cursor:pointer;
+}
+.ai-per-page-select:focus { border-color:rgba(56,189,248,0.30); }
+.ai-per-page-total { color:#6e7e95; }
+.ai-links { display:flex; gap:4px; flex-wrap:wrap; }
+.ai-page-btn {
+    padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;
+    border:1px solid rgba(255,255,255,0.07);
+    background:#1e293b; color:#7b94b7;
+    text-decoration:none; cursor:pointer; transition:all 0.16s;
+    white-space:nowrap; display:inline-block;
+}
+.ai-page-btn:hover { background:rgba(255,255,255,0.05); color:#94a3b8; }
+.ai-page-btn-active   { background:rgba(14,165,233,0.12) !important; color:#38bdf8 !important; border-color:rgba(14,165,233,0.25) !important; }
+.ai-page-btn-disabled { opacity:0.35; pointer-events:none; }
+
+/* ── Delete Modal ── */
+.ai-modal-backdrop {
+    position:fixed; inset:0; z-index:60;
+    background:rgba(0,0,0,0.60); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+}
+.ai-modal {
+    position:relative; z-index:61;
+    background:#1e293b; border:1px solid rgba(255,255,255,0.09);
+    border-radius:18px; padding:32px 28px;
+    width:500px; max-width:90vw;
+    box-shadow:0 24px 60px rgba(0,0,0,0.5);
+    font-family:'Inter',sans-serif;
+}
+.ai-modal-close {
+    position:absolute; top:14px; right:14px;
+    width:28px; height:28px; border-radius:7px;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+    color:#7b94b7; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:all 0.18s;
+}
+.ai-modal-close:hover { background:rgba(255,255,255,0.09); color:#94a3b8; }
+.ai-modal-icon {
+    width:48px; height:48px; border-radius:14px;
+    background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.22);
+    display:flex; align-items:center; justify-content:center; margin-bottom:16px;
+}
+.ai-modal-title { font-size:17px; font-weight:700; color:#f1f5f9; margin-bottom:8px; }
+.ai-modal-desc  { font-size:14px; color:#7b94b7; line-height:1.6; margin-bottom:24px; }
+.ai-modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+.ai-modal-cancel {
+    padding:9px 20px; border-radius:9px;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09);
+    color:#64748b; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.18s;
+    font-family:'Inter',sans-serif;
+}
+.ai-modal-cancel:hover { background:rgba(255,255,255,0.08); color:#94a3b8; }
+.ai-modal-delete {
+    padding:9px 20px; border-radius:9px;
+    background:linear-gradient(135deg,#dc2626,#b91c1c); border:none;
+    color:#fff; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.18s;
+    box-shadow:0 4px 14px rgba(220,38,38,0.30); font-family:'Inter',sans-serif;
+}
+.ai-modal-delete:hover { opacity:0.9; transform:translateY(-1px); }
+
+/* ── Full-screen loading overlay ── */
+.ai-loading-overlay {
+    position:fixed; inset:0; z-index:50;
+    background:rgba(0,0,0,0.55); backdrop-filter:blur(3px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+}
+.ai-spinner {
+    width:52px; height:52px; border-radius:50%;
+    border:4px solid rgba(255,255,255,0.10);
+    border-top-color:#38bdf8;
+    animation:ai-spin 0.9s linear infinite;
+}
+.ai-spinner-label { font-size:13px; color:#94a3b8; font-weight:500; }
+@keyframes ai-spin { to { transform:rotate(360deg); } }
+
+/* ── Section title inside history card ── */
+.ai-section-title { font-size:15px; font-weight:700; color:#f1f5f9; margin-bottom:16px; }
+`;
+
+const TOAST_OPTS = {
+    style: {
+        background: '#1e293b', color: '#e2e8f0',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '10px', fontSize: '13px',
+    },
+    success: { iconTheme: { primary: '#22c55e', secondary: '#1e293b' } },
+    error:   { iconTheme: { primary: '#f87171', secondary: '#1e293b' } },
+};
+
+/* helper: score → badge class */
+const scoreBadge = (val, type = 'blue') => {
+    const map = { blue:'ai-score-blue', green:'ai-score-green', purple:'ai-score-purple', orange:'ai-score-orange', red:'ai-score-red' };
+    return `ai-score ${map[type] || 'ai-score-blue'}`;
+};
 
 export default function Analytics({ jobs, resumes, matchedHistory: initialHistory, pagination }) {
     const { props } = usePage();
     const flash = props.flash || {};
-    const matchedHistoryRef = useRef(null); 
 
-    const [selectedJob, setSelectedJob] = useState('');
+    const [selectedJob,     setSelectedJob]     = useState('');
     const [selectedResumes, setSelectedResumes] = useState([]);
-    const [aiResult, setAiResult] = useState(null);
-    const [matchedHistory, setMatchedHistory] = useState(initialHistory || []);
-    const [loading, setLoading] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [matchToDelete, setMatchToDelete] = useState(null);
-    const [downloading, setDownloading] = useState(null);
-    const [showAllSkills, setShowAllSkills] = useState(false);
-    const [perPage, setPerPage] = useState(pagination.per_page || 10);
-    const [currentPage, setCurrentPage] = useState(pagination.current_page || 1);
+    const [matchedHistory,  setMatchedHistory]  = useState(initialHistory || []);
+    const [loading,         setLoading]         = useState(false);
+    const [isModalOpen,     setIsModalOpen]     = useState(false);
+    const [matchToDelete,   setMatchToDelete]   = useState(null);
+    const [downloading,     setDownloading]     = useState(null);
+    const [perPage,         setPerPage]         = useState(pagination.per_page || 10);
+    const [currentPage,     setCurrentPage]     = useState(pagination.current_page || 1);
 
+    /* flash toasts */
+    useEffect(() => {
+        if (flash.success) toast.success(flash.success);
+        if (flash.error)   toast.error(flash.error);
+    }, [flash]);
+
+    /* body scroll lock */
+    useEffect(() => {
+        document.body.style.overflow = isModalOpen ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [isModalOpen]);
+
+    /* scroll to history table */
     const scrollToMatchedHistory = () => {
-        const matchedHistoryElement = document.querySelector('.matched-history-table');  // Target the table directly by class
-        if (matchedHistoryElement) {
-            window.scrollTo({
-                top: matchedHistoryElement.offsetTop - 100,
-                behavior: 'smooth',
-            });
-        }
+        const el = document.querySelector('.ai-history-anchor');
+        if (el) window.scrollTo({ top: el.offsetTop - 100, behavior: 'smooth' });
     };
 
+    /* per-page change */
     const handlePerPageChange = (e) => {
         const newPerPage = e.target.value;
         setPerPage(newPerPage);
@@ -46,104 +335,24 @@ export default function Analytics({ jobs, resumes, matchedHistory: initialHistor
         setTimeout(scrollToMatchedHistory, 300);
     };
 
-    useEffect(() => {
-        if (flash.success) toast.success(flash.success);
-        if (flash.error) toast.error(flash.error);
-    }, [flash]);
+    /* job select options */
+    const jobOptions = jobs.map(job => ({ value: job.id, label: job.title }));
 
-    useEffect(() => {
-        if (isModalOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'auto';
-        }
-
-        return () => {
-            document.body.style.overflow = 'auto';
-        };
-    }, [isModalOpen]);
-
-    const jobOptions = jobs.map(job => ({
-        value: job.id,
-        label: job.title,
-    }));
-
-    const handleChange = (selectedOption) => {
-        setSelectedJob(selectedOption);
-    };
-
-    const handleDownload = async (matchId) => {
-        setDownloading(matchId);
-
-        try {
-            const match = matchedHistory.find(m => m.id === matchId);
-            if (!match) throw new Error('Match not found');
-            const aiData =
-                typeof match.ai_result === 'string'
-                    ? (() => { try { return JSON.parse(match.ai_result); } catch { return { ai_text: match.ai_result }; } })()
-                    : match.ai_result || { ai_text: 'No report available' };
-
-            const reportElement = document.getElementById(`report-content-${matchId}`);
-            if (!reportElement) throw new Error('Report not found');
-
-            const cloned = reportElement.cloneNode(true);
-            cloned.style.display = 'block';
-            cloned.classList.remove('hidden');
-            cloned.style.background = 'white';
-            cloned.style.padding = '20px';
-            const swElements = cloned.querySelectorAll('.strength-weakness');
-            swElements.forEach(el => el.style.breakInside = 'avoid');
-            document.body.appendChild(cloned);
-            // Use html2canvas + jsPDF
-            const canvas = await html2canvas(cloned, { scale: 2, useCORS: true });
-            const imgData = canvas.toDataURL('image/png');
-
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            let remainingHeight = pdfHeight;
-            let position = 0;
-
-            while (remainingHeight > 0) {
-                const heightToUse = Math.min(remainingHeight, pageHeight);
-                pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, pdfHeight);
-                remainingHeight -= pageHeight;
-                position += pageHeight;
-                if (remainingHeight > 0) pdf.addPage();
-            }
-
-            pdf.save(`match-report-${matchId}.pdf`);
-            document.body.removeChild(cloned);
-            toast.success('PDF downloaded successfully!');
-
-        } catch (err) {
-            console.error('[PDF] Error during download:', err);
-            toast.error('Failed to download PDF.');
-        } finally {
-            setDownloading(null);
-        }
-    };
-
+    /* resume toggle */
     const handleResumeSelect = (id) => {
         setSelectedResumes(prev =>
             prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
         );
     };
 
-    const confirmDelete = (matchId) => {
-        setMatchToDelete(matchId);
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = () => {
+    /* delete flow */
+    const confirmDelete = (matchId) => { setMatchToDelete(matchId); setIsModalOpen(true); };
+    const handleDelete  = () => {
         if (!matchToDelete) return;
-
         router.delete(route('analytics.destroy', matchToDelete), {
             preserveState: true,
             onSuccess: (page) => {
-                toast.success(page.props.flash?.success || 'Record successfully Deleted');
+                toast.success(page.props.flash?.success || 'Record successfully deleted');
                 setMatchedHistory(prev => prev.filter(m => m.id !== matchToDelete));
                 setIsModalOpen(false);
                 setMatchToDelete(null);
@@ -152,247 +361,271 @@ export default function Analytics({ jobs, resumes, matchedHistory: initialHistor
                 toast.error('Failed to delete match.');
                 setIsModalOpen(false);
                 setMatchToDelete(null);
-            }
+            },
         });
     };
 
+    /* scan */
     const handleScan = () => {
-        if (!selectedJob) {
-            toast.error('Please select a job.');
-            return;
-        }
-        if (selectedResumes.length === 0) {
-            toast.error('Please select at least one resume.');
-            return;
-        }
-
+        if (!selectedJob)                { toast.error('Please select a job.');               return; }
+        if (selectedResumes.length === 0){ toast.error('Please select at least one resume.'); return; }
         setLoading(true);
-        const jobId = typeof selectedJob == 'object' ? selectedJob.value : selectedJob;
+        const jobId = typeof selectedJob === 'object' ? selectedJob.value : selectedJob;
         router.post('/analytics/scan', { job_id: jobId, resume_ids: selectedResumes }, {
             preserveState: true,
             replace: true,
             onSuccess: (page) => {
                 setLoading(false);
-                // if (page.props.flash?.success) toast.success(page.props.flash.success);
                 toast.success(page.props.flash?.success || 'Scanned successfully');
-                // Update AI result (if returned)
-                if (page.props.ai_result) setAiResult(page.props.ai_result);
-                // Update scan history table
                 if (page.props.matchedHistory) setMatchedHistory(page.props.matchedHistory);
-
-                setSelectedResumes([]); // Clear selected resumes
-                setSelectedJob([]); // Clear selected resumes
+                setSelectedResumes([]);
+                setSelectedJob([]);
             },
-            onError: () => setLoading(false)
+            onError: () => setLoading(false),
         });
     };
 
+    /* PDF download — logic unchanged */
+    const handleDownload = async (matchId) => {
+        setDownloading(matchId);
+        try {
+            const match = matchedHistory.find(m => m.id === matchId);
+            if (!match) throw new Error('Match not found');
+
+            const reportElement = document.getElementById(`report-content-${matchId}`);
+            if (!reportElement) throw new Error('Report not found');
+
+            const cloned = reportElement.cloneNode(true);
+            cloned.style.display  = 'block';
+            cloned.classList.remove('hidden');
+            cloned.style.background = 'white';
+            cloned.style.padding    = '20px';
+            cloned.querySelectorAll('.strength-weakness').forEach(el => {
+                el.style.breakInside = 'avoid';
+            });
+            document.body.appendChild(cloned);
+
+            const canvas  = await html2canvas(cloned, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf     = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth  = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            let remainingHeight = pdfHeight;
+            let position = 0;
+            while (remainingHeight > 0) {
+                pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, pdfHeight);
+                remainingHeight -= pageHeight;
+                position        += pageHeight;
+                if (remainingHeight > 0) pdf.addPage();
+            }
+            pdf.save(`match-report-${matchId}.pdf`);
+            document.body.removeChild(cloned);
+            toast.success('PDF downloaded successfully!');
+        } catch (err) {
+            console.error('[PDF] Error during download:', err);
+            toast.error('Failed to download PDF.');
+        } finally {
+            setDownloading(null);
+        }
+    };
+
+    /* parse ai_result safely */
+    const parseAi = (match) =>
+        typeof match.ai_result === 'string'
+            ? (() => { try { return JSON.parse(match.ai_result); } catch { return { ai_text: match.ai_result }; } })()
+            : match.ai_result || { ai_text: 'No report available' };
 
     return (
         <Layout>
-            <Toaster position="top-right" />
+            <style>{styles}</style>
+            <Toaster position="top-right" toastOptions={TOAST_OPTS} />
             <Head title="Analytics" />
+
+            {/* ── Loading overlay ── */}
             {loading && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-                    <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
+                <div className="ai-loading-overlay">
+                    <div className="ai-spinner" />
+                    <span className="ai-spinner-label">Scanning resumes…</span>
                 </div>
             )}
 
-            <div className="p-6">
-                <div className="flex items-center space-x-3 mb-6">
-                    <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Analytics</h2>
+            <div className="ai-root">
+
+                {/* ── Page header ── */}
+                <div className="ai-header">
+                    <div>
+                        <div className="ai-title">Analytics</div>
+                        <div className="ai-subtitle">Scan resumes against job descriptions and review match history.</div>
+                    </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6">
-                    {/* Job Selection */}
-                    <div className="w-full">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            Select Job
-                        </label>
-                        <Select
-                            value={selectedJob}
-                            onChange={handleChange}
-                            options={jobOptions}
-                            placeholder="Search and Select a Job"
-                            classNamePrefix="react-select"
-                            isClearable
-                            isSearchable
-                        />
+                {/* ── Scan panel ── */}
+                <div className="ai-card">
+
+                    {/* Job selector */}
+                    <div style={{ marginBottom: 20 }}>
+                        <span className="ai-label">Select Job</span>
+                        <div className="ai-select">
+                            <Select
+                                value={selectedJob}
+                                onChange={setSelectedJob}
+                                options={jobOptions}
+                                placeholder="Search and select a job…"
+                                classNamePrefix="react-select"
+                                isClearable
+                                isSearchable
+                            />
+                        </div>
                     </div>
 
-                    {/* Resume Selection */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            Select Resumes
-                        </label>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-72 overflow-y-auto border dark:border-gray-500 rounded-lg p-3">
+                    {/* Resume grid */}
+                    <div style={{ marginBottom: 20 }}>
+                        <span className="ai-label">Select Resumes</span>
+                        <div className="ai-resume-grid-wrap">
                             {resumes.length > 0 ? (
-                                resumes.map((resume) => (
-                                    <div
-                                        key={resume.id}
-                                        onClick={() => handleResumeSelect(resume.id)}
-                                        className={`cursor-pointer border rounded-lg p-3 flex justify-between items-center transition 
-                                            ${selectedResumes.includes(resume.id)
-                                                ? 'bg-blue-100 border-blue-500 dark:bg-blue-900'
-                                                : 'bg-gray-50 dark:bg-gray-700 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                            }`}
-                                    >
-                                        <div>
-                                            <h4 className="font-semibold text-gray-800 dark:text-white">{resume.name}</h4>
-                                            <a
-                                                href={`/resumes/view/${resume.file_path.split('/').pop()}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-sm text-blue-600 dark:text-blue-400"
+                                <div className="ai-resume-grid">
+                                    {resumes.map((resume) => {
+                                        const isSelected = selectedResumes.includes(resume.id);
+                                        return (
+                                            <div
+                                                key={resume.id}
+                                                onClick={() => handleResumeSelect(resume.id)}
+                                                className={`ai-resume-card${isSelected ? ' selected' : ''}`}
                                             >
-                                                View File
-                                            </a>
-                                        </div>
-                                        {selectedResumes.includes(resume.id) && (
-                                            <span className="text-blue-600 font-bold">✓</span>
-                                        )}
-                                    </div>
-                                ))
+                                                {/* Top row: icon + check */}
+                                                <div className="ai-resume-card-top">
+                                                    <div className="ai-resume-icon">
+                                                        <DocumentTextIcon style={{ width: 15, height: 15, color: '#818cf8' }} />
+                                                    </div>
+                                                    {isSelected
+                                                        ? <div className="ai-resume-check"><CheckIcon style={{ width: 12, height: 12, color: '#38bdf8' }} /></div>
+                                                        : <div className="ai-resume-placeholder" />
+                                                    }
+                                                </div>
+                                                {/* Name */}
+                                                <div className="ai-resume-name" title={resume.name}>{resume.name}</div>
+                                                {/* View link */}
+                                                {resume.file_url && (
+                                                    <a
+                                                        href={resume.file_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="ai-resume-link"
+                                                        onClick={e => e.stopPropagation()}
+                                                    >
+                                                        <ArrowTopRightOnSquareIcon style={{ width: 11, height: 11 }} />
+                                                        View file
+                                                    </a>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             ) : (
-                                <p className="text-gray-500 dark:text-gray-400 text-center col-span-full">
+                                <div className="ai-resume-empty">
+                                    <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
                                     No resumes found.
-                                </p>
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Scan Button */}
-                    <div className="text-right">
-                        <button
-                            onClick={handleScan}
-                            className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
-                        >
-                            🔍 Scan Selected
+                    {/* Scan button */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="ai-btn-scan" onClick={handleScan} disabled={loading}>
+                            <MagnifyingGlassIcon style={{ width: 15, height: 15 }} />
+                            {loading ? 'Scanning…' : 'Scan Selected'}
                         </button>
                     </div>
-
-
-                    {isModalOpen && (
-                        <div className="fixed inset-0 flex items-center justify-center z-50">
-                            <div
-                                className="fixed inset-0 bg-black opacity-50"
-                                onClick={() => setIsModalOpen(false)}
-                            ></div>
-                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 z-50 w-96 relative">
-                                <button
-                                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-white"
-                                    onClick={() => setIsModalOpen(false)}
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-
-                                <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
-                                    Confirm Delete
-                                </h3>
-                                <p className="mb-6 text-gray-600 dark:text-gray-300">
-                                    Are you sure you want to delete this match? This action cannot be undone.
-                                </p>
-                                <div className="flex justify-end space-x-3">
-                                    <button
-                                        onClick={() => setIsModalOpen(false)}
-                                        className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 transition"
-                                    >
-                                        No
-                                    </button>
-                                    <button
-                                        onClick={handleDelete}
-                                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                                    >
-                                        Yes, Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                 </div>
-                {matchedHistory.length > 0 && (
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6 mt-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2 matched-history-table">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-                                Scan History
-                            </h3>
 
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-gray-100 dark:bg-gray-700">
-                                    <tr className="border-b border-gray-300 dark:border-gray-600">
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Resume</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Job</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Match %</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">ATS Score %</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Semantic Score %</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Keyword Score %</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Keyword Gap</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                                        <th className="px-2 py-3 text-left text-sm font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Action</th>
+                {/* ── Scan History ── */}
+                {matchedHistory.length > 0 && (
+                    <div className="ai-card ai-history-anchor">
+                        <div className="ai-section-title">Scan History</div>
+
+                        <div className="ai-table-wrap">
+                            <table className="ai-table">
+                                <thead>
+                                    <tr>
+                                        <th>Resume</th>
+                                        <th>Job</th>
+                                        <th>Match %</th>
+                                        <th>ATS Score %</th>
+                                        <th>Semantic %</th>
+                                        <th>Keyword %</th>
+                                        <th>Keyword Gap</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {matchedHistory.map((match) => {
-                                        const aiData =
-                                            typeof match.ai_result === 'string'
-                                                ? (() => {
-                                                    try { return JSON.parse(match.ai_result); }
-                                                    catch { return { ai_text: match.ai_result }; }
-                                                })()
-                                                : match.ai_result || { ai_text: 'No report available' };
-
+                                        const aiData = parseAi(match);
                                         return (
                                             <React.Fragment key={match.id}>
-                                                {/* Main Row */}
-                                                <tr className="border-b border-gray-200 dark:border-gray-700">
-                                                    <td className="p-2">{match.resume_name || aiData.resume_name || 'N/A'}</td>
-                                                    <td className="p-2">
-                                                        <Link
-                                                            href={`/jobs/${match.job_description_id}`}
-                                                            className="text-blue-500 hover:underline"
-                                                        >
-                                                            {jobs.find((job) => job.id === match.job_description_id)?.title || 'N/A'}
-                                                        </Link>
+                                                <tr>
+                                                    <td className="ai-td-name">{match.resume_name || aiData.resume_name || 'N/A'}</td>
+                                                    <td className="ai-td-link">
+                                                        <a href={`/jobs/${match.job_description_id}`}>
+                                                            {jobs.find(j => j.id === match.job_description_id)?.title || 'N/A'}
+                                                        </a>
                                                     </td>
-                                                    <td className="p-2">{aiData.overall_match_percentage ?? '-'}</td>
-                                                    <td className="p-2">{aiData.ats_best_practice?.ats_score ?? 0}</td>
-                                                    <td className="p-2">{aiData.scores?.semantic_score ?? '-'}</td>
-                                                    <td className="p-2">{aiData.scores?.keyword_score ?? '-'}</td>
-                                                    <td className="p-2">{aiData.scores?.keyword_gap ?? '-'}</td>
-                                                    <td className="p-2">
-                                                        {new Date(match.created_at).toLocaleDateString()}
+                                                    <td>
+                                                        <span className={scoreBadge(aiData.overall_match_percentage, 'blue')}>
+                                                            {aiData.overall_match_percentage ?? '-'}%
+                                                        </span>
                                                     </td>
-                                                    <td className="p-2 flex space-x-2">
-
-                                                        <button
-                                                            className="text-blue-600 hover:text-blue-800"
-                                                            title="view"
-                                                            onClick={() => Inertia.get(`/analytics/match-history/${match.id}`)}
-                                                            // onClick={() => {
-                                                            //     const report = document.getElementById(`report-${match.id}`);
-                                                            //     report.classList.toggle('hidden');
-                                                            // }}
-                                                        >
-                                                            <EyeIcon className="h-5 w-5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => confirmDelete(match.id)}
-                                                            className="text-red-600 hover:text-red-800"
-                                                            title="Delete"
-                                                        >
-                                                            <TrashIcon className="h-5 w-5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDownload(match.id)}
-                                                            disabled={downloading === match.id}
-                                                            className={`text-green-600 hover:text-green-800 flex items-center ${downloading === match.id ? 'opacity-50 cursor-not-allowed' : ''
-                                                                }`}
-                                                            title="Download PDF"
-                                                        >
-                                                            {downloading === match.id ? 'Processing...' : <ArrowDownTrayIcon className="h-5 w-5" />}
-                                                        </button>
+                                                    <td>
+                                                        <span className={scoreBadge(aiData.ats_best_practice?.ats_score, 'green')}>
+                                                            {aiData.ats_best_practice?.ats_score ?? 0}%
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={scoreBadge(aiData.scores?.semantic_score, 'purple')}>
+                                                            {aiData.scores?.semantic_score ?? '-'}%
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={scoreBadge(aiData.scores?.keyword_score, 'orange')}>
+                                                            {aiData.scores?.keyword_score ?? '-'}%
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={scoreBadge(aiData.scores?.keyword_gap, 'red')}>
+                                                            {aiData.scores?.keyword_gap ?? '-'}%
+                                                        </span>
+                                                    </td>
+                                                    <td>{new Date(match.created_at).toLocaleDateString()}</td>
+                                                    <td>
+                                                        <div className="ai-actions">
+                                                            <button
+                                                                className="ai-action-btn ai-action-view"
+                                                                title="View"
+                                                                onClick={() => Inertia.get(`/analytics/match-history/${match.id}`)}
+                                                            >
+                                                                <EyeIcon style={{ width: 14, height: 14 }} />
+                                                            </button>
+                                                            <button
+                                                                className="ai-action-btn ai-action-del"
+                                                                title="Delete"
+                                                                onClick={() => confirmDelete(match.id)}
+                                                            >
+                                                                <TrashIcon style={{ width: 14, height: 14 }} />
+                                                            </button>
+                                                            <button
+                                                                className="ai-action-btn ai-action-download"
+                                                                title="Download PDF"
+                                                                disabled={downloading === match.id}
+                                                                onClick={() => handleDownload(match.id)}
+                                                            >
+                                                                {downloading === match.id
+                                                                    ? <span style={{ fontSize: 10, color: '#34d399' }}>…</span>
+                                                                    : <ArrowDownTrayIcon style={{ width: 14, height: 14 }} />
+                                                                }
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             </React.Fragment>
@@ -400,201 +633,192 @@ export default function Analytics({ jobs, resumes, matchedHistory: initialHistor
                                     })}
                                 </tbody>
                             </table>
-                            {matchedHistory.map((match) => {
-                                const aiData =
-                                    typeof match.ai_result === 'string'
-                                        ? (() => {
-                                            try { return JSON.parse(match.ai_result); }
-                                            catch { return { ai_text: match.ai_result }; }
-                                        })()
-                                        : match.ai_result || { ai_text: 'No report available' };
-
-                                return (
-                                    <div
-                                        key={`report-${match.id}`}
-                                        id={`report-content-${match.id}`}
-                                        className="hidden w-full p-6 bg-white"
-                                        style={{ background: 'white', padding: '20px', fontSize: '20px', lineHeight: 'normal' }}
-                                    >
-                                        {/* Logo */}
-                                        <div className="flex items-center justify-center mb-6">
-                                            {/* <img src='/images/skillsync-title.png' alt="SkillSync.ai" className="h-12 object-contain" /> */}
-                                            <img src="/images/skillsync-logo.png" alt="SkillSync.ai" className="h-12 object-contain" />
-                                        </div>
-
-                                        <div className="space-y-6" style={{ fontSize: '20px', lineHeight: 'normal' }}>
-                                            {/* Overall Match & ATS Score*/}
-                                            <div className="flex space-x-4 mb-6">
-                                                {/* Overall Match */}
-                                                <div className="flex-1">
-                                                    <h4 className="font-semibold text-gray-800 mb-3" style={{ fontSize: '20px', lineHeight: 'normal' }}>
-                                                        Overall Match: {aiData.overall_match_percentage ?? 0}%
-                                                    </h4>
-                                                    <div className="w-full bg-gray-200 rounded-full h-5">
-                                                        <div
-                                                            className="bg-indigo-500 h-5 rounded-full transition-all duration-500"
-                                                            style={{ width: `${aiData.overall_match_percentage ?? 0}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                {/* ATS Score */}
-                                                <div className="flex-1">
-                                                    <h4 className="font-semibold text-gray-800 mb-3" style={{ fontSize: '20px', lineHeight: 'normal' }}>
-                                                        ATS Score: {aiData.ats_best_practice?.ats_score ?? 0}%
-                                                    </h4>
-                                                    <div className="w-full bg-gray-200 rounded-full h-5">
-                                                        <div
-                                                            className="bg-green-500 h-5 rounded-full transition-all duration-500"
-                                                            style={{ width: `${aiData.ats_best_practice?.ats_score ?? 0}%` }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Scores Bars */}
-                                            <div className="grid grid-cols-3 gap-4">
-                                                {['semantic_score', 'keyword_score', 'keyword_gap'].map((key) => (
-                                                    <div key={key}>
-                                                        <h5 className="text-gray-700 text-base font-medium capitalize mb-3" style={{ fontSize: '20px', lineHeight: 'normal' }}>
-                                                            {key.replace('_', ' ')}
-                                                        </h5>
-                                                        <div className="w-full bg-gray-200 rounded-full h-4">
-                                                            <div
-                                                                className="bg-rose-500 h-4 rounded-full transition-all duration-500"
-                                                                style={{ width: `${aiData.scores?.[key] ?? 0}%` }}
-                                                            />
-                                                        </div>
-                                                        <p className="text-sm text-gray-600 mt-1" style={{ fontSize: '16px', lineHeight: 'normal' }}>
-                                                            {aiData.scores?.[key] ?? 0}%
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="mb-6">
-                                                <h4 className="text-gray-800  font-semibold mb-3">ATS Best Practices</h4>
-                                                {/* ATS Details Table */}
-                                                <table className="w-full text-left border-collapse">
-                                                    <tbody>
-                                                        {aiData.ats_best_practice &&
-                                                            Object.entries(aiData.ats_best_practice)
-                                                                .filter(([key]) => key !== 'ats_score')
-                                                                .map(([key, value]) => (
-                                                                    <tr key={key} className="border-b border-gray-200">
-                                                                        <td className="px-2 py-2 font-medium text-gray-700 capitalize">
-                                                                            {key.replace(/_/g, ' ')}
-                                                                        </td>
-                                                                        <td className="px-2 py-2 text-gray-600">{value}</td>
-                                                                    </tr>
-                                                                ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            {/* Skills Table */}
-                                            <div className="overflow-x-auto">
-                                                <table className="min-w-full text-left border border-gray-300 rounded" style={{ fontSize: '22px', lineHeight: 'normal' }}>
-                                                    <thead className="bg-gray-100">
-                                                        <tr>
-                                                            <th className="p-2">Skills</th>
-                                                            <th className="p-2">Resume</th>
-                                                            <th className="p-2">Job Description</th>
-                                                            <th className="p-2">Gap</th>
-                                                            <th className="p-2">Matched</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {aiData.skills_analysis?.map((skill) => (
-                                                            <tr key={skill.skill} className="border-t border-gray-200">
-                                                                <td className="p-2">{skill.skill}</td>
-                                                                <td className="p-2">{skill.resume_count}</td>
-                                                                <td className="p-2">{skill.job_count}</td>
-                                                                <td className="p-2">{skill.gap}</td>
-                                                                <td className="p-2">{skill.matched ? <CheckIcon className="h-5 w-5 text-green-500" /> : '-'}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-
-                                            {/* Strengths & Weaknesses */}
-                                            <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 break-inside-avoid">
-                                                <div className="flex-1">
-                                                    <h5 className="text-gray-800 font-semibold mb-3" style={{ fontSize: '22px' }}>Strengths</h5>
-                                                    <p className="text-gray-700 whitespace-pre-wrap" style={{ fontSize: '20px', lineHeight: 'normal' }}>
-                                                        {aiData.strengths ?? 'N/A'}
-                                                    </p>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h5 className="text-gray-800 font-semibold mb-3" style={{ fontSize: '22px' }}>Weaknesses</h5>
-                                                    <p className="text-gray-700 whitespace-pre-wrap" style={{ fontSize: '20px', lineHeight: 'normal' }}>
-                                                        {aiData.weaknesses ?? 'N/A'}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Detailed AI Text */}
-                                            <div>
-                                                <h5 className="text-gray-800 font-semibold mb-3" style={{ fontSize: '22px' }}>Detailed Analysis</h5>
-                                                <p className="text-gray-700 whitespace-pre-wrap" style={{ fontSize: '20px', lineHeight: 'normal' }}>
-                                                    {aiData.ai_text || 'No report available'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
                         </div>
-                        {/* Pagination + Per Page Selector */}
-                            <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between space-y-2 md:space-y-0">
-                                {/* Per Page Selector */}
-                                <div className="flex items-center space-x-2">
-                                    <span className="text-gray-700 dark:text-gray-300">Show:</span>
-                                    <select
-                                        value={perPage}
-                                        onChange={handlePerPageChange}
-                                        className="border rounded px-5 py-1 dark:bg-gray-800 dark:text-white text-sm"
-                                    >
-                                        {[10, 25, 50, 100].map((n) => (
-                                            <option key={n} value={n}>{n}</option>
-                                        ))}
-                                    </select>
-                                    <span className="text-gray-500 dark:text-gray-400">of {pagination.total} entries</span>
-                                </div>
 
-                                {/* Pagination Links */}
-                                <div className="flex space-x-1 overflow-x-auto">
-                                    {pagination.links
-                                        .filter(link => link.url || link.label === '« Previous' || link.label === 'Next »')
-                                        .map((link, index) => (
-                                            <Link
-                                                key={index}
-                                                onClick={handlePerPageChange}
-                                                href={link.url || '#'}
-                                                className={`px-3 py-1 border rounded-md transition whitespace-nowrap dark:border-gray-500 ${link.active
-                                                    ? 'bg-gray-800 text-white'
-                                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                                    } ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        ))}
+                        {/* ── Pagination ── */}
+                        <div className="ai-pagination-row">
+                            <div className="ai-per-page">
+                                <span>Show</span>
+                                <select
+                                    className="ai-per-page-select"
+                                    value={perPage}
+                                    onChange={handlePerPageChange}
+                                >
+                                    {[10, 25, 50, 100].map(n => (
+                                        <option key={n} value={n}>{n}</option>
+                                    ))}
+                                </select>
+                                <span className="ai-per-page-total">of {pagination.total} entries</span>
+                            </div>
+                            <div className="ai-links">
+                                {pagination.links
+                                    .filter(l => l.url || l.label === '&laquo; Previous' || l.label === 'Next &raquo;')
+                                    .map((link, i) => (
+                                        <Link
+                                            key={i}
+                                            href={link.url || '#'}
+                                            onClick={scrollToMatchedHistory}
+                                            className={`ai-page-btn ${link.active ? 'ai-page-btn-active' : ''} ${!link.url ? 'ai-page-btn-disabled' : ''}`}
+                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                        />
+                                    ))}
                             </div>
                         </div>
                     </div>
                 )}
-
             </div>
 
-            {/* Loader CSS */}
-            <style>{`
-                .loader {
-                    border-top-color: #3498db;
-                    animation: spin 1s ease-in-out infinite;
-                }
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `}</style>
+            {/* ── Hidden PDF report divs (unchanged — required for html2canvas) ── */}
+            {matchedHistory.map((match) => {
+                const aiData = parseAi(match);
+                return (
+                    <div
+                        key={`report-${match.id}`}
+                        id={`report-content-${match.id}`}
+                        className="hidden w-full p-6 bg-white"
+                        style={{ background: 'white', padding: '20px', fontSize: '20px', lineHeight: 'normal' }}
+                    >
+                        {/* Logo */}
+                        <div className="flex items-center justify-center mb-6">
+                            <img src="/images/skillsync-logo.png" alt="SkillSync.ai" className="h-12 object-contain" />
+                        </div>
+
+                        <div className="space-y-6" style={{ fontSize: '20px', lineHeight: 'normal' }}>
+                            {/* Overall Match & ATS Score */}
+                            <div className="flex space-x-4 mb-6">
+                                <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-800 mb-3" style={{ fontSize: '20px', lineHeight: 'normal' }}>
+                                        Overall Match: {aiData.overall_match_percentage ?? 0}%
+                                    </h4>
+                                    <div className="w-full bg-gray-200 rounded-full h-5">
+                                        <div className="bg-indigo-500 h-5 rounded-full transition-all duration-500"
+                                            style={{ width: `${aiData.overall_match_percentage ?? 0}%` }} />
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-800 mb-3" style={{ fontSize: '20px', lineHeight: 'normal' }}>
+                                        ATS Score: {aiData.ats_best_practice?.ats_score ?? 0}%
+                                    </h4>
+                                    <div className="w-full bg-gray-200 rounded-full h-5">
+                                        <div className="bg-green-500 h-5 rounded-full transition-all duration-500"
+                                            style={{ width: `${aiData.ats_best_practice?.ats_score ?? 0}%` }} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Score bars */}
+                            <div className="grid grid-cols-3 gap-4">
+                                {['semantic_score', 'keyword_score', 'keyword_gap'].map((key) => (
+                                    <div key={key}>
+                                        <h5 className="text-gray-700 text-base font-medium capitalize mb-3" style={{ fontSize: '20px', lineHeight: 'normal' }}>
+                                            {key.replace('_', ' ')}
+                                        </h5>
+                                        <div className="w-full bg-gray-200 rounded-full h-4">
+                                            <div className="bg-rose-500 h-4 rounded-full transition-all duration-500"
+                                                style={{ width: `${aiData.scores?.[key] ?? 0}%` }} />
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-1" style={{ fontSize: '16px', lineHeight: 'normal' }}>
+                                            {aiData.scores?.[key] ?? 0}%
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* ATS Best Practices */}
+                            <div className="mb-6">
+                                <h4 className="text-gray-800 font-semibold mb-3">ATS Best Practices</h4>
+                                <table className="w-full text-left border-collapse">
+                                    <tbody>
+                                        {aiData.ats_best_practice &&
+                                            Object.entries(aiData.ats_best_practice)
+                                                .filter(([key]) => key !== 'ats_score')
+                                                .map(([key, value]) => (
+                                                    <tr key={key} className="border-b border-gray-200">
+                                                        <td className="px-2 py-2 font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}</td>
+                                                        <td className="px-2 py-2 text-gray-600">{value}</td>
+                                                    </tr>
+                                                ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Skills table */}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full text-left border border-gray-300 rounded" style={{ fontSize: '22px', lineHeight: 'normal' }}>
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="p-2">Skills</th>
+                                            <th className="p-2">Resume</th>
+                                            <th className="p-2">Job Description</th>
+                                            <th className="p-2">Gap</th>
+                                            <th className="p-2">Matched</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {aiData.skills_analysis?.map((skill) => (
+                                            <tr key={skill.skill} className="border-t border-gray-200">
+                                                <td className="p-2">{skill.skill}</td>
+                                                <td className="p-2">{skill.resume_count}</td>
+                                                <td className="p-2">{skill.job_count}</td>
+                                                <td className="p-2">{skill.gap}</td>
+                                                <td className="p-2">
+                                                    {skill.matched ? <CheckIcon className="h-5 w-5 text-green-500" /> : '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Strengths & Weaknesses */}
+                            <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 break-inside-avoid strength-weakness">
+                                <div className="flex-1">
+                                    <h5 className="text-gray-800 font-semibold mb-3" style={{ fontSize: '22px' }}>Strengths</h5>
+                                    <p className="text-gray-700 whitespace-pre-wrap" style={{ fontSize: '20px', lineHeight: 'normal' }}>
+                                        {aiData.strengths ?? 'N/A'}
+                                    </p>
+                                </div>
+                                <div className="flex-1">
+                                    <h5 className="text-gray-800 font-semibold mb-3" style={{ fontSize: '22px' }}>Weaknesses</h5>
+                                    <p className="text-gray-700 whitespace-pre-wrap" style={{ fontSize: '20px', lineHeight: 'normal' }}>
+                                        {aiData.weaknesses ?? 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Detailed AI text */}
+                            <div>
+                                <h5 className="text-gray-800 font-semibold mb-3" style={{ fontSize: '22px' }}>Detailed Analysis</h5>
+                                <p className="text-gray-700 whitespace-pre-wrap" style={{ fontSize: '20px', lineHeight: 'normal' }}>
+                                    {aiData.ai_text || 'No report available'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+
+            {/* ── Delete Modal ── */}
+            {isModalOpen && (
+                <div className="ai-modal-backdrop" onClick={() => setIsModalOpen(false)}>
+                    <div className="ai-modal" onClick={e => e.stopPropagation()}>
+                        <button className="ai-modal-close" onClick={() => setIsModalOpen(false)}>
+                            <XMarkIcon style={{ width: 14, height: 14 }} />
+                        </button>
+                        <div className="ai-modal-icon">
+                            <TrashIcon style={{ width: 22, height: 22, color: '#f87171' }} />
+                        </div>
+                        <div className="ai-modal-title">Delete Match?</div>
+                        <div className="ai-modal-desc">
+                            Are you sure you want to delete this match record? This action cannot be undone.
+                        </div>
+                        <div className="ai-modal-actions">
+                            <button className="ai-modal-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                            <button className="ai-modal-delete" onClick={handleDelete}>Yes, Delete</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 }

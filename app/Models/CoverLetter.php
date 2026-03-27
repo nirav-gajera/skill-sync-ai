@@ -10,7 +10,9 @@ class CoverLetter extends Model
     use HasFactory;
 
     protected $table = 'cover_letters';
+
     protected $primaryKey = 'id';
+
     protected $fillable = [
         'user_id',
         'resume_id',
@@ -20,11 +22,8 @@ class CoverLetter extends Model
         'file_path',
         'template_id',
     ];
-    protected $casts = [
-        'created_at' => 'datetime:Y-m-d H:i:s',
-        'updated_at' => 'datetime:Y-m-d H:i:s',
-        'ai_result' => 'array',
-    ];
+
+    protected $appends = ['file_url'];
 
     public function user()
     {
@@ -38,6 +37,20 @@ class CoverLetter extends Model
 
     public function job()
     {
-        return $this->belongsTo(Job::class,'job_description_id');
+        return $this->belongsTo(Job::class, 'job_description_id');
+    }
+
+    public function getFileUrlAttribute(): ?string
+    {
+        return storageFileUrl($this->file_path);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime:Y-m-d H:i:s',
+            'updated_at' => 'datetime:Y-m-d H:i:s',
+            'ai_result' => 'array',
+        ];
     }
 }

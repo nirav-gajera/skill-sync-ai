@@ -4,21 +4,19 @@ namespace App\Http\Controllers;
 
 use App\AppNeuronMyAgent;
 use App\Models\InterviewPrep;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
 use App\Models\Job;
 use App\Models\Resume;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class InterviewPrepController extends Controller
 {
-
     public function index(Request $request)
     {
         $userId = Auth::id();
         $perPage = $request->input('per_page', 10);
-
 
         $InterviewPreps = InterviewPrep::with(['job'])
             ->where('user_id', $userId)
@@ -37,6 +35,7 @@ class InterviewPrepController extends Controller
             ],
         ]);
     }
+
     public function create()
     {
         $userId = Auth::id();
@@ -49,6 +48,7 @@ class InterviewPrepController extends Controller
             'resumes' => $resumes,
         ]);
     }
+
     public function store(Request $request)
     {
         $userId = Auth::id();
@@ -64,19 +64,20 @@ class InterviewPrepController extends Controller
         // --- Get Resume data ---
         $resume = Resume::where('id', $validated['resume_id'])->where('user_id', $userId)->firstOrFail();
 
-        $filePath = storage_path('app/public/' . $resume->file_path);
-
-        // --- Extract resume text ---
-        $content = extractResumeContent($filePath);
+        $content = withStoredFile($resume->file_path, function (string $filePath): string {
+            // --- Extract resume text ---
+            return extractResumeContent($filePath);
+        });
 
         // --- AI Generation ---
         try {
-            $agent = new AppNeuronMyAgent();
+            $agent = new AppNeuronMyAgent;
             $aiResult = $agent->createInterviewPrep($job->title, $job->description ?? '', [
-                ['id' => $resume->id, 'content' => $content]
+                ['id' => $resume->id, 'content' => $content],
             ]);
         } catch (\Exception $e) {
-            Log::error("InterviewPrep AI error: " . $e->getMessage());
+            Log::error('InterviewPrep AI error: '.$e->getMessage());
+
             return back()->with('error', 'AI generation failed.');
         }
 
@@ -89,17 +90,15 @@ class InterviewPrepController extends Controller
             'summary' => json_decode($aiResult, true)['summary'] ?? null,
         ]);
 
-
         return redirect()->route('interview-preps.index')->with('success', 'Interview prep created successfully.');
     }
-
 
     public function show($id)
     {
         $InterviewPrepData = InterviewPrep::with('job')->findOrFail($id);
 
         $questionsAnswers = [];
-        if (!empty($InterviewPrepData->questions_answers)) {
+        if (! empty($InterviewPrepData->questions_answers)) {
             $decoded = json_decode($InterviewPrepData->questions_answers, true);
             if (is_array($decoded)) {
                 // Handle nested case: { "questions_answers": [...] }
@@ -118,19 +117,19 @@ class InterviewPrepController extends Controller
                 'summary' => $InterviewPrepData->summary,
                 'questions_answers' => $questionsAnswers,
                 'created_at' => $InterviewPrepData->created_at->format('d M, Y H:i'),
-            ]
+            ],
         ]);
     }
 
     public function destroy($id)
     {
         $InterviewPrep = InterviewPrep::find($id);
-        if (!$InterviewPrep) {
+        if (! $InterviewPrep) {
             return back()->with('error', 'Interview Prep not found.');
         }
 
         $InterviewPrep->delete();
 
-    return redirect()->route('interview-preps.index')->with('success', 'Interview Prep data deleted successfully.');
+        return redirect()->route('interview-preps.index')->with('success', 'Interview Prep data deleted successfully.');
     }
 }

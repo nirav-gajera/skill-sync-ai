@@ -1,14 +1,115 @@
 <?php
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
-if (!function_exists('extractResumeContent')) {
+if (! function_exists('storageDiskName')) {
+    function storageDiskName(): string
+    {
+        return (string) config('filesystems.default', 'public');
+    }
+}
+
+if (! function_exists('storageFileUrl')) {
+    function storageFileUrl(?string $filePath): ?string
+    {
+        if (! $filePath) {
+            return null;
+        }
+
+        $diskName = storageDiskName();
+        $diskConfig = config("filesystems.disks.{$diskName}", []);
+        $driver = $diskConfig['driver'] ?? '';
+
+        if ($driver === 's3') {
+            $expirationMinutes = (int) env('FILESYSTEM_TEMP_URL_EXPIRATION', 5);
+            $expiration = now()->addMinutes($expirationMinutes);
+
+            /** @var \Illuminate\Filesystem\AwsS3V3Adapter $disk */
+            $disk = Storage::disk($diskName);
+
+            return $disk->temporaryUrl($filePath, $expiration);
+        }
+
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk($diskName);
+
+        return $disk->url($filePath);
+    }
+}
+
+if (! function_exists('withStoredFile')) {
+    function withStoredFile(string $filePath, callable $callback): mixed
+    {
+        $diskName = storageDiskName();
+        $diskConfig = config("filesystems.disks.{$diskName}", []);
+        $disk = Storage::disk($diskName);
+
+        if (($diskConfig['driver'] ?? null) === 'local') {
+            return $callback($disk->path($filePath));
+        }
+
+        $sourceStream = $disk->readStream($filePath);
+
+        if ($sourceStream === false) {
+            throw new RuntimeException("Unable to read file [{$filePath}] from disk [{$diskName}].");
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'storage_');
+
+        if ($tempPath === false) {
+            if (is_resource($sourceStream)) {
+                fclose($sourceStream);
+            }
+
+            throw new RuntimeException('Unable to create a temporary file.');
+        }
+
+        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+
+        if ($extension !== '') {
+            $renamedTempPath = $tempPath.'.'.$extension;
+            rename($tempPath, $renamedTempPath);
+            $tempPath = $renamedTempPath;
+        }
+
+        $tempStream = fopen($tempPath, 'wb');
+
+        if ($tempStream === false) {
+            if (is_resource($sourceStream)) {
+                fclose($sourceStream);
+            }
+
+            @unlink($tempPath);
+
+            throw new RuntimeException("Unable to open temporary file [{$tempPath}] for writing.");
+        }
+
+        try {
+            stream_copy_to_stream($sourceStream, $tempStream);
+
+            return $callback($tempPath);
+        } finally {
+            if (is_resource($sourceStream)) {
+                fclose($sourceStream);
+            }
+
+            if (is_resource($tempStream)) {
+                fclose($tempStream);
+            }
+
+            @unlink($tempPath);
+        }
+    }
+}
+
+if (! function_exists('extractResumeContent')) {
     function extractResumeContent(string $filePath): string
     {
-        Log::info("Extracting resume", ['file' => $filePath]);
+        Log::info('Extracting resume', ['file' => $filePath]);
 
-        if (!file_exists($filePath)) {
-            Log::error("Resume file not found", ['file' => $filePath]);
+        if (! file_exists($filePath)) {
+            Log::error('Resume file not found', ['file' => $filePath]);
             throw new \Exception("Resume file not found at {$filePath}");
         }
 
@@ -24,37 +125,27 @@ if (!function_exists('extractResumeContent')) {
                     break;
 
                 case 'pdf':
-                    $content = \Spatie\PdfToText\Pdf::getText($filePath);
+                    $parser = new \Smalot\PdfParser\Parser;
+                    $pdf = $parser->parseFile($filePath);
+                    $content = $pdf->getText();
                     break;
 
                 case 'docx':
-                    $phpWord = \PhpOffice\PhpWord\IOFactory::load($filePath, 'Word2007');
+                case 'doc':
+                    $reader = ($ext === 'docx') ? 'Word2007' : 'MsDoc';
+                    $phpWord = \PhpOffice\PhpWord\IOFactory::load($filePath, $reader);
                     foreach ($phpWord->getSections() as $section) {
-                        foreach ($section->getElements() as $e) {
-                            if (method_exists($e, 'getText')) {
-                                $content .= $e->getText() . "\n";
+                        foreach ($section->getElements() as $element) {
+                            if (method_exists($element, 'getText')) {
+                                $content .= $element->getText()."\n";
+                            } elseif (method_exists($element, 'getElements')) {
+                                foreach ($element->getElements() as $child) {
+                                    if (method_exists($child, 'getText')) {
+                                        $content .= $child->getText()."\n";
+                                    }
+                                }
                             }
                         }
-                    }
-                    break;
-
-                case 'doc':
-                    $outputDir = storage_path('app/tmp');
-                    if (!file_exists($outputDir)) mkdir($outputDir, 0755, true);
-
-                    $outputPath = $outputDir . '/' . pathinfo($filePath, PATHINFO_FILENAME) . '.txt';
-                    $sofficePath = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN'
-                        ? '"C:\\Program Files\\LibreOffice\\program\\soffice.exe"'
-                        : '/usr/bin/soffice';
-
-                    $cmd = $sofficePath . ' --headless --convert-to txt:Text --outdir ' . escapeshellarg($outputDir) . ' ' . escapeshellarg($filePath);
-                    exec($cmd, $output, $returnCode);
-
-                    if ($returnCode === 0 && file_exists($outputPath)) {
-                        $content = file_get_contents($outputPath);
-                        unlink($outputPath);
-                    } else {
-                        throw new \Exception("LibreOffice conversion failed for {$filePath}");
                     }
                     break;
 
@@ -63,13 +154,15 @@ if (!function_exists('extractResumeContent')) {
             }
 
             // Normalize encoding
-            $content = mb_convert_encoding($content, 'UTF-8', mb_detect_encoding($content, 'UTF-8, ISO-8859-1, Windows-1252', true));
+            $detected = mb_detect_encoding($content, 'UTF-8, ISO-8859-1, Windows-1252', true);
+            $content = mb_convert_encoding($content, 'UTF-8', $detected ?: 'UTF-8');
             $content = preg_replace('/[^\PC\s]/u', '', $content);
 
-            Log::info("Resume content extracted", ['length' => strlen($content)]);
+            Log::info('Resume content extracted', ['length' => strlen($content)]);
+
             return trim($content);
         } catch (\Exception $e) {
-            Log::error("Error extracting content", [
+            Log::error('Error extracting content', [
                 'file' => $filePath,
                 'error' => $e->getMessage(),
             ]);
@@ -81,13 +174,10 @@ if (!function_exists('extractResumeContent')) {
 if (! function_exists('coverLetterTemplateView')) {
     /**
      * Get the Blade view path for a given cover letter template ID.
-     *
-     * @param int $templateId
-     * @return string
      */
     function coverLetterTemplateView(int $templateId = 0): string
     {
-        return match($templateId) {
+        return match ($templateId) {
             1 => 'pdf.cover-letter-template-1',
             2 => 'pdf.cover-letter-template-2',
             3 => 'pdf.cover-letter-template-3',
