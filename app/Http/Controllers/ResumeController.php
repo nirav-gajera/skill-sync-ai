@@ -10,6 +10,8 @@ use Inertia\Inertia;
 
 class ResumeController extends Controller
 {
+    const DISK = 'public';
+
     public function index(Request $request)
     {
         $query = Resume::where('user_id', Auth::id());
