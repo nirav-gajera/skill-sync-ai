@@ -5,12 +5,12 @@
 ---
 ## 🔗 Demo
 
-🌐 https://skill-sync-ai-production.up.railway.app/
+🌐 https://skill-sync-ai-main-ypcxjm.free.laravel.cloud/
 
 Use the demo account to log in:
 
-- **Email:** `admin@gmail.com`
-- **Password:** `123456789`
+- **Email:** `nirav1@gmail.com`
+- **Password:** `5J5kJ6qJDpRNYk8`
 ---
 ## 🧠 Features
 
