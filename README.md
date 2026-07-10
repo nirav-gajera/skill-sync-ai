@@ -7,10 +7,6 @@
 
 🌐 https://skill-sync-ai-main-ypcxjm.free.laravel.cloud/
 
-Use the demo account to log in:
-
-- **Email:** `nirav1@gmail.com`
-- **Password:** `5J5kJ6qJDpRNYk8`
 ---
 ## 🧠 Features
 
