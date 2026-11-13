@@ -1241,16 +1241,16 @@
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "2.13.2",
+            "version": "2.13.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "adee536f95101929f262b8c59e8a61472f347d58"
+                "reference": "6d3cd8285a97eaa352956a4ada92fa03ecce1c4e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/adee536f95101929f262b8c59e8a61472f347d58",
-                "reference": "adee536f95101929f262b8c59e8a61472f347d58",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/6d3cd8285a97eaa352956a4ada92fa03ecce1c4e",
+                "reference": "6d3cd8285a97eaa352956a4ada92fa03ecce1c4e",
                 "shasum": ""
             },
             "require": {
@@ -1340,7 +1340,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/psr7/issues",
-                "source": "https://github.com/guzzle/psr7/tree/2.13.2"
+                "source": "https://github.com/guzzle/psr7/tree/2.13.3"
             },
             "funding": [
                 {
@@ -1356,7 +1356,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-17T23:49:46+00:00"
+            "time": "2026-11-12T15:57:42+00:00"
         },
         {
             "name": "guzzlehttp/uri-template",
@@ -1516,16 +1516,16 @@
         },
         {
             "name": "inspector-apm/inspector-php",
-            "version": "3.16.1",
+            "version": "3.19.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/inspector-apm/inspector-php.git",
-                "reference": "40c9e72f8f973bb5ca038135f1a0b78b91bc66af"
+                "reference": "27d5133dd47e96dabc6fa4f80e7328e5d74848a7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/inspector-apm/inspector-php/zipball/40c9e72f8f973bb5ca038135f1a0b78b91bc66af",
-                "reference": "40c9e72f8f973bb5ca038135f1a0b78b91bc66af",
+                "url": "https://api.github.com/repos/inspector-apm/inspector-php/zipball/27d5133dd47e96dabc6fa4f80e7328e5d74848a7",
+                "reference": "27d5133dd47e96dabc6fa4f80e7328e5d74848a7",
                 "shasum": ""
             },
             "require": {
@@ -1534,13 +1534,19 @@
             "require-dev": {
                 "ext-curl": "*",
                 "friendsofphp/php-cs-fixer": "^3.75",
-                "inspector-apm/neuron-ai": "^1.2.22",
+                "neuron-core/neuron-ai": "^4.0",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^9.0",
-                "rector/rector": "^2.0",
+                "rector/rector": "^2.2",
                 "tomasvotruba/type-coverage": "^2.0"
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "3.17.x-dev",
+                    "dev-develop": "3.17.x-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "Inspector\\": "src/"
@@ -1566,9 +1572,9 @@
             ],
             "support": {
                 "issues": "https://github.com/inspector-apm/inspector-php/issues",
-                "source": "https://github.com/inspector-apm/inspector-php/tree/3.16.1"
+                "source": "https://github.com/inspector-apm/inspector-php/tree/3.19.1"
             },
-            "time": "2025-07-09T17:22:19+00:00"
+            "time": "2026-09-30T10:34:47+00:00"
         },
         {
             "name": "laravel/framework",
@@ -3160,16 +3166,16 @@
         },
         {
             "name": "neuron-core/neuron-ai",
-            "version": "2.6.2",
+            "version": "2.8.12",
             "source": {
                 "type": "git",
                 "url": "https://github.com/neuron-core/neuron-ai.git",
-                "reference": "fa71ae25baaef251909726a43d33a21035f25d13"
+                "reference": "44bab85d92bf162898ee48d0bcef6ba0d29b59c9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/neuron-core/neuron-ai/zipball/fa71ae25baaef251909726a43d33a21035f25d13",
-                "reference": "fa71ae25baaef251909726a43d33a21035f25d13",
+                "url": "https://api.github.com/repos/neuron-core/neuron-ai/zipball/44bab85d92bf162898ee48d0bcef6ba0d29b59c9",
+                "reference": "44bab85d92bf162898ee48d0bcef6ba0d29b59c9",
                 "shasum": ""
             },
             "require": {
@@ -3185,6 +3191,7 @@
                 "ext-pdo": "*",
                 "friendsofphp/php-cs-fixer": "^3.75",
                 "html2text/html2text": "^4.3",
+                "illuminate/database": "^10.0|^11.0|^12.0",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^9.0",
                 "rector/rector": "^2.0",
@@ -3222,9 +3229,9 @@
             "description": "The PHP Agentic Framework.",
             "support": {
                 "issues": "https://github.com/neuron-core/neuron-ai/issues",
-                "source": "https://github.com/neuron-core/neuron-ai/tree/2.6.2"
+                "source": "https://github.com/neuron-core/neuron-ai/tree/2.8.12"
             },
-            "time": "2025-10-22T09:03:01+00:00"
+            "time": "2025-11-24T18:52:39+00:00"
         },
         {
             "name": "nikic/php-parser",
