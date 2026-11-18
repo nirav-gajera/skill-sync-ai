@@ -2,10 +2,6 @@
 
 **SkillSync.ai** is an AI-powered platform for analytics, resume-job matching, interview preparation, and cover-letter creation, built with **Laravel 12**, **React**, and **Inertia.js** — empowering job seekers and hiring teams to instantly assess resume relevance, identify skill gaps, prepare for interviews, and create tailored cover letters to improve hiring efficiency.
 
----
-## 🔗 Demo
-
-🌐 https://skill-sync-ai-main-ypcxjm.free.laravel.cloud/
 
 ---
 ## 🧠 Features
@@ -99,7 +95,7 @@ Feel free to browse the images used throughout the project.
 
 ```bash
 # Clone the repository
-git clone https://github.com/nirav-arsenaltech/skill-sync-ai.git
+git clone https://github.com/nirav-gajera/skill-sync-ai.git
 cd skill-sync-ai
 
 # Install dependencies
@@ -161,7 +157,7 @@ You can run Laravel tests using:
 
 ## 👨‍💻 Author
 
-- Developed by [Nirav](https://github.com/nirav-arsenaltech)
+- Developed by [Nirav Gajera](https://niravgajera.indevs.in)
 
 ---
 
@@ -179,12 +175,12 @@ We welcome contributions and ideas to improve **SkillSync.ai**! 🚀
 
 ### 🛠️ Found a Bug?
 
-Please open an [Issue](https://github.com/nirav-arsenaltech/skill-sync-ai/issues) with steps to reproduce and, if possible, screenshots or error logs.
+Please open an [Issue](https://github.com/nirav-gajera/skill-sync-ai/issues) with steps to reproduce and, if possible, screenshots or error logs.
 
 ### ❤️ Support the Project
 
 If you find this project helpful, consider giving it a ⭐ on GitHub.  
-You can also [share it](https://github.com/nirav-arsenaltech/skill-sync-ai) with friends or on social platforms to help others benefit from it.
+You can also [share it](https://github.com/nirav-gajera/skill-sync-ai) with friends or on social platforms to help others benefit from it.
 
 ---
 
